@@ -36,13 +36,67 @@ sudo apt install samba samba-common-bin -y
 ```
 ### 5. **Instalçao e Configuração do Zabbix**
 
-**Instalação do repositório do Zabbix:**
+#### a) Instalar o repositório Zabbix
+
 ```bash
 wget https://repo.zabbix.com/zabbix/7.2/release/debian/pool/main/z/zabbix-release/zabbix-release_latest_7.2+debian12_all.deb
-dpkg -i zabbix-release_latest_7.2+debian12_all.deb
-apt update
+sudo dpkg -i zabbix-release_latest_7.2+debian12_all.deb
+sudo apt update
+
 ```
-**Instalação do Servidor, FrontEnd e Agente:**
+
+#### b) Instalar o servidor Zabbix, o frontend e o agente
 ```bash
-apt install zabbix-server-mysql zabbix-frontend-php zabbix-apache-conf zabbix-sql-scripts zabbix-agent
+sudo apt install zabbix-server-mysql zabbix-frontend-php zabbix-apache-conf zabbix-sql-scripts zabbix-agent -y
+```
+
+#### c) Criar o banco de dados inicial
+Certifique-se de que o servidor de banco de dados (MariaDB/MySQL) esteja instalado e funcionando.
+
+Acesse o MySQL como root:
+```bash
+mysql -u root -p
+```
+Dentro do prompt do MySQL, execute os seguintes comandos:
+
+```bash
+create database zabbix character set utf8mb4 collate utf8mb4_bin;
+create user zabbix@localhost identified by 'password';
+grant all privileges on zabbix.* to zabbix@localhost;
+set global log_bin_trust_function_creators = 1;
+quit;
+```
+Depois, importe o esquema inicial de dados
+```bash
+zcat /usr/share/zabbix/sql-scripts/mysql/server.sql.gz | mysql --default-character-set=utf8mb4 -u zabbix -p zabbix
+```
+
+(Será solicitada a senha do usuário zabbix criada anteriormente.)
+
+Após importar o esquema, desative a configuração log_bin_trust_function_creators:
+
+```bash
+mysql -u root -p
+```
+Dentro do MySQL:
+```bash
+set global log_bin_trust_function_creators = 0;
+quit;
+```
+### d) Configurar o banco de dados para o servidor Zabbix
+Edite o arquivo /etc/zabbix/zabbix_server.conf:
+```bash
+sudo nano /etc/zabbix/zabbix_server.conf
+```
+Localize e configure a linha:
+```bash
+DBPassword=password
+```
+Salve e feche o arquivo.
+
+Após essas configurações:
+Reinicie os serviços do Zabbix e do Apache:
+```bash
+sudo systemctl restart zabbix-server zabbix-agent apache2
+sudo systemctl enable zabbix-server zabbix-agent apache2
 ```
